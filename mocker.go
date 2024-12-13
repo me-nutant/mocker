@@ -5,6 +5,7 @@ import (
 	"log"
 	"reflect"
 	"runtime"
+	"sync"
 )
 
 type Return struct {
@@ -15,6 +16,7 @@ type Return struct {
 }
 
 type Mock struct {
+	mu           sync.Mutex
 	originalFunc reflect.Value
 	patchedFunc  reflect.Value
 	anyTimes     bool
@@ -48,6 +50,9 @@ func (m *Mock) generateReplacement(target reflect.Value) reflect.Value {
 				return m.returnValues[0].returnFn.Call(args)
 			}
 		} else if m.returnValues[0].calledTimes < m.returnValues[0].times {
+			// Adding mutex lock to prevent race condition in accessing m.returnValues
+			m.mu.Lock()
+			defer m.mu.Unlock()
 			m.returnValues[0].calledTimes++
 			if reflect.ValueOf(m.returnValues[0].returnFn).IsZero() {
 				rets := m.returnValues[0]

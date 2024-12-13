@@ -49,19 +49,21 @@ func (m *Mock) generateReplacement(target reflect.Value) reflect.Value {
 			} else {
 				return m.returnValues[0].returnFn.Call(args)
 			}
-		} else if m.returnValues[0].calledTimes < m.returnValues[0].times {
+		} else {
 			// Adding mutex lock to prevent race condition in accessing m.returnValues
 			m.mu.Lock()
 			defer m.mu.Unlock()
 			m.returnValues[0].calledTimes++
-			if reflect.ValueOf(m.returnValues[0].returnFn).IsZero() {
-				rets := m.returnValues[0]
-				if m.returnValues[0].calledTimes >= m.returnValues[0].times {
-					m.returnValues = m.returnValues[1:]
+			if m.returnValues[0].calledTimes < m.returnValues[0].times {
+				if reflect.ValueOf(m.returnValues[0].returnFn).IsZero() {
+					rets := m.returnValues[0]
+					if m.returnValues[0].calledTimes >= m.returnValues[0].times {
+						m.returnValues = m.returnValues[1:]
+					}
+					return rets.returnValues
+				} else {
+					return m.returnValues[0].returnFn.Call(args)
 				}
-				return rets.returnValues
-			} else {
-				return m.returnValues[0].returnFn.Call(args)
 			}
 		}
 		panic("unexpected call to " + m.name)
